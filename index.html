@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apple Übersetzer mit Live-Übersetzung</title>
+    <style>
+        :root {
+            --bg-color: #f5f5f7;
+            --card-color: #ffffff;
+            --primary-text: #1d1d1f;
+            --secondary-text: #86868b;
+            --accent-color: #0071e3;
+            --border-color: #d2d2d7;
+            --button-hover: #f5f5f7;
+            --error-color: #ff3b30;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--primary-text);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .translator-container {
+            width: 100%;
+            max-width: 800px;
+            background-color: var(--card-color);
+            border-radius: 18px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .language-selector {
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .language-tab {
+            flex: 1;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            font-weight: 500;
+        }
+
+        .language-tab:hover {
+            background-color: var(--button-hover);
+        }
+
+        .language-tab.active {
+            color: var(--accent-color);
+            border-bottom: 2px solid var(--accent-color);
+        }
+
+        .translation-area {
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+        }
+
+        .text-box-container {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .language-label {
+            position: absolute;
+            top: 10px;
+            left: 15px;
+            color: var(--secondary-text);
+            font-size: 14px;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 150px;
+            padding: 35px 15px 15px 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            font-family: inherit;
+            font-size: 16px;
+            resize: none;
+            box-sizing: border-box;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--accent-color);
+        }
+
+        .action-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 15px;
+        }
+
+        button {
+            background-color: transparent;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-family: inherit;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: var(--button-hover);
+        }
+
+        .translate-button {
+            background-color: var(--accent-color);
+            color: white;
+        }
+
+        .translate-button:hover {
+            background-color: #0062c4;
+        }
+
+        .swap-button {
+            color: var(--accent-color);
+        }
+
+        .char-count {
+            color: var(--secondary-text);
+            font-size: 14px;
+            align-self: center;
+        }
+
+        .error-message {
+            color: var(--error-color);
+            font-size: 14px;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 600px) {
+            .language-selector {
+                flex-direction: column;
+            }
+            
+            .language-tab {
+                padding: 12px;
+                text-align: left;
+                padding-left: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Übersetzer</h1>
+    </div>
+
+    <div class="translator-container">
+        <div class="language-selector">
+            <div class="language-tab active" data-lang="de">Deutsch</div>
+            <div class="language-tab" data-lang="en">Englisch</div>
+            <div class="language-tab" data-lang="fr">Französisch</div>
+            <div class="language-tab" data-lang="es">Spanisch</div>
+            <div class="language-tab" data-lang="it">Italienisch</div>
+            <div class="language-tab" data-lang="pt">Portugiesisch</div>
+            <div class="language-tab" data-lang="nl">Niederländisch</div>
+            <div class="language-tab" data-lang="ru">Russisch</div>
+            <div class="language-tab" data-lang="zh">Chinesisch</div>
+            <div class="language-tab" data-lang="ja">Japanisch</div>
+        </div>
+
+        <div class="translation-area">
+            <div class="text-box-container">
+                <div class="language-label" id="source-label">Deutsch</div>
+                <textarea id="source-text" placeholder="Text eingeben..."></textarea>
+            </div>
+
+            <div class="action-buttons">
+                <button class="swap-button" id="swap-languages">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M16 17.01V10H14V17.01H11L15 21L19 17.01H16ZM9 3L5 6.99H8V14H10V6.99H13L9 3Z" fill="currentColor"/>
+                    </svg>
+                    Sprachen tauschen
+                </button>
+                <span class="char-count" id="char-count">0/5000</span>
+            </div>
+
+            <div class="text-box-container">
+                <div class="language-label" id="target-label">Englisch</div>
+                <textarea id="target-text" placeholder="Übersetzung" readonly></textarea>
+            </div>
+
+            <div class="error-message" id="error-message"></div>
+
+            <button class="translate-button" id="translate-button">
+                <span id="translate-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 4L10.59 5.41L16.17 11H4V13H16.17L10.59 18.59L12 20L20 12L12 4Z" fill="white"/>
+                    </svg>
+                </span>
+                Übersetzen
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Sprachdaten
+        const languages = {
+            de: { code: 'de', name: 'Deutsch' },
+            en: { code: 'en', name: 'Englisch' },
+            fr: { code: 'fr', name: 'Französisch' },
+            es: { code: 'es', name: 'Spanisch' },
+            it: { code: 'it', name: 'Italienisch' },
+            pt: { code: 'pt', name: 'Portugiesisch' },
+            nl: { code: 'nl', name: 'Niederländisch' },
+            ru: { code: 'ru', name: 'Russisch' },
+            zh: { code: 'zh', name: 'Chinesisch' },
+            ja: { code: 'ja', name: 'Japanisch' }
+        };
+
+        // UI Elemente
+        const sourceText = document.getElementById('source-text');
+        const targetText = document.getElementById('target-text');
+        const sourceLabel = document.getElementById('source-label');
+        const targetLabel = document.getElementById('target-label');
+        const charCount = document.getElementById('char-count');
+        const translateButton = document.getElementById('translate-button');
+        const swapButton = document.getElementById('swap-languages');
+        const languageTabs = document.querySelectorAll('.language-tab');
+        const errorMessage = document.getElementById('error-message');
+        const translateIcon = document.getElementById('translate-icon');
+
+        // Zustand
+        let sourceLanguage = 'de';
+        let targetLanguage = 'en';
+        let isTranslating = false;
+
+        // Zeichenzähler aktualisieren
+        sourceText.addEventListener('input', () => {
+            const count = sourceText.value.length;
+            charCount.textContent = `${count}/5000`;
+            
+            // Auto-Übersetzung bei kurzen Texten
+            if (count > 0 && count < 100) {
+                debouncedTranslate();
+            }
+        });
+
+        // Sprache auswählen
+        languageTabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                // Aktiven Tab zurücksetzen
+                languageTabs.forEach(t => t.classList.remove('active'));
+                
+                // Neuen Tab aktivieren
+                tab.classList.add('active');
+                const langCode = tab.getAttribute('data-lang');
+                
+                // Sprache setzen (je nach aktiver Textarea)
+                if (document.activeElement === sourceText) {
+                    sourceLanguage = langCode;
+                    sourceLabel.textContent = languages[langCode].name;
+                } else {
+                    targetLanguage = langCode;
+                    targetLabel.textContent = languages[langCode].name;
+                }
+                
+                // Neu übersetzen wenn Text vorhanden
+                if (sourceText.value.trim() !== '') {
+                    debouncedTranslate();
+                }
+            });
+        });
+
+        // Sprachen tauschen
+        swapButton.addEventListener('click', () => {
+            // Sprachen tauschen
+            [sourceLanguage, targetLanguage] = [targetLanguage, sourceLanguage];
+            
+            // Labels aktualisieren
+            sourceLabel.textContent = languages[sourceLanguage].name;
+            targetLabel.textContent = languages[targetLanguage].name;
+            
+            // Text tauschen
+            [sourceText.value, targetText.value] = [targetText.value, sourceText.value];
+            
+            // Zeichenzahl aktualisieren
+            charCount.textContent = `${sourceText.value.length}/5000`;
+            
+            // Neu übersetzen wenn Text vorhanden
+            if (sourceText.value.trim() !== '') {
+                debouncedTranslate();
+            }
+        });
+
+        // Debounce-Funktion für Auto-Übersetzung
+        let debounceTimer;
+        function debouncedTranslate() {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                translateText();
+            }, 1000);
+        }
+
+        // Übersetzen mit Google Translate API
+        async function translateText() {
+            const text = sourceText.value.trim();
+            if (text === '') {
+                targetText.value = '';
+                errorMessage.style.display = 'none';
+                return;
+            }
+            
+            if (text.length > 5000) {
+                showError('Text zu lang (max 5000 Zeichen)');
+                return;
+            }
+            
+            if (sourceLanguage === targetLanguage) {
+                targetText.value = text;
+                errorMessage.style.display = 'none';
+                return;
+            }
+            
+            try {
+                // Ladeanimation starten
+                isTranslating = true;
+                translateButton.disabled = true;
+                translateIcon.innerHTML = '<div class="loading"></div>';
+                
+                // Google Translate API (kostenlos über CORS-Proxy)
+                const response = await fetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sourceLanguage}&tl=${targetLanguage}&dt=t&q=${encodeURIComponent(text)}`);
+                
+                if (!response.ok) {
+                    throw new Error('Übersetzungsdienst nicht verfügbar');
+                }
+                
+                const data = await response.json();
+                let translatedText = '';
+                
+                // Übersetzung aus der komplexen Google-API-Antwort extrahieren
+                if (data && Array.isArray(data[0])) {
+                    data[0].forEach(item => {
+                        if (item[0]) {
+                            translatedText += item[0];
+                        }
+                    });
+                }
+                
+                targetText.value = translatedText;
+                errorMessage.style.display = 'none';
+            } catch (error) {
+                console.error('Übersetzungsfehler:', error);
+                showError('Übersetzung fehlgeschlagen. Bitte versuchen Sie es später erneut.');
+                targetText.value = '';
+            } finally {
+                // Ladeanimation beenden
+                isTranslating = false;
+                translateButton.disabled = false;
+                translateIcon.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 4L10.59 5.41L16.17 11H4V13H16.17L10.59 18.59L12 20L20 12L12 4Z" fill="white"/></svg>';
+            }
+        }
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+        }
+
+        // Übersetzen beim Klick auf den Button
+        translateButton.addEventListener('click', translateText);
+
+        // Fokus auf die erste Textarea setzen
+        sourceText.focus();
+    </script>
+</body>
+</html>
